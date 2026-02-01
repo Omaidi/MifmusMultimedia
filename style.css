@@ -31,8 +31,20 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    /* Lock scroll as requested */
+    /* Lock scroll */
     background-color: var(--primary-color);
+}
+
+/* Nuclear Background Fix: Infinite Green Canvas */
+body::before {
+    content: "";
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background-color: var(--primary-color);
+    z-index: -100;
 }
 
 body {
@@ -77,8 +89,14 @@ body {
 .container {
     width: 100%;
     max-width: 600px;
+    max-width: 600px;
     z-index: 10;
     text-align: center;
+    /* Ensure container fits and allows flex shrinking */
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 /* Typography */
@@ -310,12 +328,69 @@ input[type="range"] {
 }
 
 /* Responsive */
+/* Responsive & Compact Mode */
 @media (max-width: 480px) {
+    .header {
+        margin-bottom: 15px;
+        /* Compact margin */
+    }
+
     .header h1 {
-        font-size: 2rem;
+        font-size: 1.8rem;
+        /* Smaller title */
+        margin-bottom: 0;
+    }
+
+    .header h2 {
+        font-size: 0.9rem;
+    }
+
+    .subtitle {
+        font-size: 0.8rem;
+        margin-top: 5px;
     }
 
     .twibbon-card {
-        padding: 16px;
+        padding: 15px;
+        gap: 12px;
+        /* Tighter gaps */
+        width: 95%;
+        /* Use full width */
+        margin: 0 auto;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+
+    /* Adjust canvas size for small screens to prevent overflow */
+    .canvas-container {
+        max-width: 80vw;
+        /* Limit width to save vertical space */
+        margin: 0 auto;
+    }
+}
+
+/* Landscape / Short Screen Fix */
+@media (max-height: 700px) {
+    .header {
+        display: none;
+    }
+
+    /* Hide header on very short screens/landscape to focus on app */
+    .footer {
+        display: none;
+    }
+
+    .twibbon-card {
+        flex-direction: row;
+        /* Side by side on landscape? Or just compact */
+        padding: 10px;
+    }
+
+    .canvas-container {
+        height: 80vh;
+        width: auto;
     }
 }
