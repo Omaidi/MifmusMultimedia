@@ -26,7 +26,8 @@ function init() {
 
     // Load Frame
     loadingOverlay.style.display = 'flex';
-    frameImage.crossOrigin = "anonymous";
+    // Removed crossOrigin = "anonymous" to prevent tainted canvas issues with local/relative images
+    // frameImage.crossOrigin = "anonymous"; 
     // Using the user's uploaded file "Siap Sukseskan.png"
     frameImage.src = './Siap Sukseskan.png';
     frameImage.onload = () => {
@@ -37,7 +38,15 @@ function init() {
         // Fallback to original if new one fails
         console.warn("New frame not found, trying default.");
         frameImage.src = './frame.png';
-        frameImage.onload = loadDefaultCanvas;
+        frameImage.onload = () => {
+            loadDefaultCanvas();
+            loadingOverlay.style.display = 'none';
+        };
+        // Add another error handler for the fallback
+        frameImage.onerror = () => {
+            alert("Gagal memuat frame. Pastikan file frame tersedia.");
+            loadingOverlay.style.display = 'none';
+        }
     };
 }
 
@@ -79,7 +88,15 @@ function processFrameTransparency() {
         loadingOverlay.style.display = 'none';
         updateCanvas();
     };
-    processedImage.src = hiddenCanvas.toDataURL();
+    try {
+        processedImage.src = hiddenCanvas.toDataURL();
+    } catch (e) {
+        console.error("Canvas tainted or error:", e);
+        // Fallback: If processing fails (e.g. CORS), just use original
+        frameImage.onload = null; // Prevent recursion
+        loadDefaultCanvas();
+        loadingOverlay.style.display = 'none';
+    }
 }
 
 // Initial draw: Just the frame
