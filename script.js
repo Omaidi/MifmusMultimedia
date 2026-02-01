@@ -13,7 +13,8 @@ let userImage = new Image();
 let userImageLoaded = false;
 
 // Configuration
-const CANVAS_SIZE = 1080;
+// Configuration
+const CANVAS_SIZE = 2160; // Upgraded to 4K/2K for sharper results
 let scale = 1;
 let position = { x: 0, y: 0 };
 let isDragging = false;
@@ -206,7 +207,8 @@ function drag(e) {
 downloadBtn.addEventListener('click', () => {
     const link = document.createElement('a');
     link.download = 'Twibbon-Haflah-Miftahul-Mustarsyidin.png';
-    link.href = canvas.toDataURL('image/png');
+    // Use maximum quality for PNG (though PNG is lossless, sometimes browser implementation varies)
+    link.href = canvas.toDataURL('image/png', 1.0);
     link.click();
 });
 
