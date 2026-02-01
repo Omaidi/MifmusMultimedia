@@ -24,47 +24,57 @@ let startPos = { x: 0, y: 0 };
 function init() {
     // Canvas size will be set after frame loads
 
+    // List of possible filenames to try (Priority Order)
+    const frameCandidates = [
+        './bg.png?v=3',
+        './bg.png',
+        './Siap Sukseskan_FINAL.png',
+        './Siap Sukseskan.png',
+        './assets/frame.png',
+        './frame.png'
+    ];
+    let currentCandidateIndex = 0;
+
+    function tryLoadFrame() {
+        if (currentCandidateIndex >= frameCandidates.length) {
+            loadingOverlay.style.display = 'none';
+            alert("FATAL ERROR: Tidak ada gambar background yang ditemukan! Pastikan Anda meng-upload 'bg.png' atau 'Siap Sukseskan.png' ke GitHub.");
+            return;
+        }
+
+        const candidate = frameCandidates[currentCandidateIndex];
+        console.log(`Trying to load: ${candidate}`);
+
+        frameImage.src = candidate;
+    }
+
     // Load Frame
     loadingOverlay.style.display = 'flex';
-    // Removed crossOrigin = "anonymous" to prevent tainted canvas issues with local/relative images
-    // frameImage.crossOrigin = "anonymous"; 
-    // Using the final image with new QR code
-    // Using the simplified background name with Cache Buster to force reload
-    frameImage.src = './bg.png?v=2';
+
     frameImage.onload = () => {
-        // Direct load - No complex processing
+        console.log("Success loading: " + frameImage.src);
         finishLoadingFrame();
     };
 
-    // Aggressive Timeout: 3 seconds max
+    frameImage.onerror = () => {
+        console.warn(`Failed to load: ${frameCandidates[currentCandidateIndex]}`);
+        currentCandidateIndex++;
+        tryLoadFrame(); // Try next
+    };
+
+    // Start loading
+    tryLoadFrame();
+
+    // Aggressive Timeout: 5 seconds max to allow retries
     setTimeout(() => {
         if (loadingOverlay.style.display !== 'none') {
+            // Even if loading fails visualy, valid canvas might persist.
+            // But usually this means total failure or slow connection.
+            // We force hide overlay so user can at least try uploading.
             loadingOverlay.style.display = 'none';
-            // Alert user if legacy cache is suspected or file missing
             console.log("Forcing load due to timeout.");
-            // If checking fails, we just let the canvas be (it might show nothing but at least UI is usable)
         }
-    }, 3000);
-
-    frameImage.onerror = () => {
-        console.error("BG.png not found.");
-        // Try fallback to old names just in case user didn't upload new one yet
-        frameImage.src = './bg.png?v=2';
-        frameImage.onerror = () => {
-            // Fallback to original if new one fails
-            console.warn("New frame not found, trying default.");
-            frameImage.src = './frame.png';
-            frameImage.onload = () => {
-                loadDefaultCanvas();
-                loadingOverlay.style.display = 'none';
-            };
-            // Add another error handler for the fallback
-            frameImage.onerror = () => {
-                loadingOverlay.style.display = 'none';
-                alert("ERROR: File 'bg.png' tidak ditemukan di GitHub! Mohon upload file tersebut.");
-            }
-        };
-    }
+    }, 5000);
 
     function processFrameTransparency() {
         const hiddenCanvas = document.createElement('canvas');
