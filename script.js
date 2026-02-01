@@ -1,0 +1,261 @@
+const canvas = document.getElementById('twibbonCanvas');
+const ctx = canvas.getContext('2d');
+const imageInput = document.getElementById('imageInput');
+const zoomSlider = document.getElementById('zoomSlider');
+const downloadBtn = document.getElementById('downloadBtn');
+const zoomControl = document.getElementById('zoomControl');
+const instructionOverlay = document.getElementById('instructionOverlay');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const resetBtn = document.getElementById('resetBtn');
+
+let frameImage = new Image();
+let userImage = new Image();
+let userImageLoaded = false;
+
+// Configuration
+// Configuration
+let currentScale = 1;
+let scale = 1;
+let position = { x: 0, y: 0 };
+let isDragging = false;
+let startPos = { x: 0, y: 0 };
+
+// Initialize
+function init() {
+    // Canvas size will be set after frame loads
+
+    // List of possible filenames to try (Priority Order)
+    const frameCandidates = [
+        './bg.png?v=3',
+        './bg.png',
+        './Siap Sukseskan_FINAL.png',
+        './Siap Sukseskan.png',
+        './assets/frame.png',
+        './frame.png'
+    ];
+    let currentCandidateIndex = 0;
+
+    function tryLoadFrame() {
+        if (currentCandidateIndex >= frameCandidates.length) {
+            loadingOverlay.style.display = 'none';
+            alert("FATAL ERROR: Tidak ada gambar background yang ditemukan! Pastikan Anda meng-upload 'bg.png' atau 'Siap Sukseskan.png' ke GitHub.");
+            return;
+        }
+
+        const candidate = frameCandidates[currentCandidateIndex];
+        console.log(`Trying to load: ${candidate}`);
+
+        frameImage.src = candidate;
+    }
+
+    // Load Frame
+    loadingOverlay.style.display = 'flex';
+
+    frameImage.onload = () => {
+        console.log("Success loading: " + frameImage.src);
+        finishLoadingFrame();
+    };
+
+    frameImage.onerror = () => {
+        console.warn(`Failed to load: ${frameCandidates[currentCandidateIndex]}`);
+        currentCandidateIndex++;
+        tryLoadFrame(); // Try next
+    };
+
+    // Start loading
+    tryLoadFrame();
+
+    // Aggressive Timeout: 5 seconds max to allow retries
+    setTimeout(() => {
+        if (loadingOverlay.style.display !== 'none') {
+            // Even if loading fails visualy, valid canvas might persist.
+            // But usually this means total failure or slow connection.
+            // We force hide overlay so user can at least try uploading.
+            loadingOverlay.style.display = 'none';
+            console.log("Forcing load due to timeout.");
+        }
+    }, 5000);
+
+    function processFrameTransparency() {
+        const hiddenCanvas = document.createElement('canvas');
+        hiddenCanvas.width = frameImage.width;
+        hiddenCanvas.height = frameImage.height;
+        const hCtx = hiddenCanvas.getContext('2d');
+        hCtx.drawImage(frameImage, 0, 0);
+
+        const imageData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+        const data = imageData.data;
+
+        // Chroma Key: Remove Blue
+        // Logic: Blue > Red + threshold AND Blue > Green + threshold
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+
+            // Thresholds can be tuned. 
+            // If it's a "Blue" screen, B is usually dominant.
+            if (b > r + 20 && b > g + 20 && b > 100) {
+                data[i + 3] = 0; // Alpha = 0 (Transparent)
+            }
+        }
+
+        hCtx.putImageData(imageData, 0, 0);
+
+        // Replace frameImage source with processed one
+        const processedImage = new Image();
+        processedImage.onload = () => {
+            frameImage = processedImage;
+            // Set canvas to match frame resolution EXACTLY
+            canvas.width = frameImage.naturalWidth;
+            canvas.height = frameImage.naturalHeight;
+
+            loadDefaultCanvas();
+            loadingOverlay.style.display = 'none';
+            updateCanvas();
+        };
+        try {
+            processedImage.src = hiddenCanvas.toDataURL();
+        } catch (e) {
+            console.error("Canvas tainted or error:", e);
+            // Fallback: If processing fails (e.g. CORS), just use original
+            frameImage.onload = null; // Prevent recursion
+            loadDefaultCanvas();
+            loadingOverlay.style.display = 'none';
+        }
+    }
+
+    // Initial draw: Just the frame
+    function loadDefaultCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Draw placeholder background if transparent
+        ctx.fillStyle = '#f0f0f0'; // Light grey bg for transparency check
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.drawImage(frameImage, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    }
+
+    // Handle Image Upload
+    imageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                userImage = new Image();
+                userImage.onload = () => {
+                    userImageLoaded = true;
+                    resetPosition();
+                    updateCanvas();
+                    showControls();
+                };
+                userImage.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function resetPosition() {
+        scale = 1;
+        zoomSlider.value = 1;
+
+        // Fit user image to canvas
+        let scaleEffect = Math.max(canvas.width / userImage.width, canvas.height / userImage.height);
+        scale = scaleEffect;
+
+        // Reset position to center
+        position.x = (canvas.width - userImage.width * scale) / 2;
+        position.y = (canvas.height - userImage.height * scale) / 2;
+    }
+
+    function showControls() {
+        instructionOverlay.style.display = 'none';
+        zoomControl.classList.remove('hidden');
+        downloadBtn.classList.remove('hidden');
+        resetBtn.classList.remove('hidden');
+
+        // Remove dashed border looks better
+        document.querySelector('.canvas-container').style.border = 'none';
+    }
+
+    function updateCanvas() {
+        if (!userImageLoaded) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 1. Draw User Image
+        // Apply transformations
+        // We need to pivot zoom around center? or just simple scaling top-left
+        // Simple scaling is easier for MVP. 
+
+        // Helper to calculate current dimensions
+        const currentWidth = userImage.width * scale * zoomSlider.value;
+        const currentHeight = userImage.height * scale * zoomSlider.value;
+
+        // Draw
+        ctx.drawImage(userImage, position.x, position.y, currentWidth, currentHeight);
+
+        // 2. Draw Frame on top
+        ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    }
+
+    // Zoom Control
+    zoomSlider.addEventListener('input', () => {
+        // Optional: Zoom towards center logic could be added here
+        // For now simple redraw
+        updateCanvas();
+    });
+
+    // Dragging Logic
+    // Mouse
+    canvas.addEventListener('mousedown', startDrag);
+    window.addEventListener('mouseup', stopDrag);
+    window.addEventListener('mousemove', drag);
+
+    // Touch
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // prevent scrolling
+        startDrag(e.touches[0]);
+    }, { passive: false });
+    window.addEventListener('touchend', stopDrag);
+    window.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        drag(e.touches[0]);
+    }, { passive: false });
+
+    function startDrag(e) {
+        if (!userImageLoaded) return;
+        isDragging = true;
+        startPos.x = e.clientX - position.x;
+        startPos.y = e.clientY - position.y;
+        canvas.style.cursor = 'grabbing';
+    }
+
+    function stopDrag() {
+        isDragging = false;
+        canvas.style.cursor = 'grab';
+    }
+
+    function drag(e) {
+        if (!isDragging) return;
+        position.x = e.clientX - startPos.x;
+        position.y = e.clientY - startPos.y;
+        updateCanvas();
+    }
+
+    // Download
+    downloadBtn.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = 'Twibbon-Haflah-Miftahul-Mustarsyidin.png';
+        // Use maximum quality for PNG (though PNG is lossless, sometimes browser implementation varies)
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+    });
+
+    // Reset
+    resetBtn.addEventListener('click', () => {
+        resetPosition();
+        updateCanvas();
+    });
+
+    // Initialize app
+    init();
