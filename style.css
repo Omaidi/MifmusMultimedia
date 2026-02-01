@@ -21,21 +21,31 @@
     /* Remove blue highlight on tap */
 }
 
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    /* Lock scroll */
+    overscroll-behavior: none;
+    /* Prevent bounce */
+    background-color: var(--primary-color);
+}
+
 body {
     font-family: 'Outfit', sans-serif;
-    background-color: var(--primary-color);
     color: var(--text-light);
-    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow-x: hidden;
-    position: relative;
-    padding: 20px;
-}
-
-html {
-    background-color: var(--primary-color);
+    position: fixed;
+    /* Force fixed to viewport */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
 /* Background Effects */
@@ -75,10 +85,42 @@ html {
 
 .header h1 {
     font-family: 'Playfair Display', serif;
-    font-size: 2.5rem;
-    color: var(--accent-gold);
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    font-size: 2.8rem;
+    /* Slightly larger */
+    background: linear-gradient(45deg, #FFD700, #FDB931, #FFD700);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    /* Gradient Text */
+    text-shadow: 0px 0px 20px rgba(255, 215, 0, 0.3);
     margin-bottom: 5px;
+    animation: titleEntrance 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    /* Animate on load */
+    opacity: 0;
+    /* Start hidden */
+}
+
+/* Premium Entrance Animation */
+@keyframes titleEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+        filter: blur(10px);
+    }
+
+    50% {
+        opacity: 1;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.5);
+        /* Strong Glow */
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+        text-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+        /* Elegant Setup */
+    }
 }
 
 .header h2 {
