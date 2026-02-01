@@ -29,22 +29,27 @@ function init() {
     // Removed crossOrigin = "anonymous" to prevent tainted canvas issues with local/relative images
     // frameImage.crossOrigin = "anonymous"; 
     // Using the final image with new QR code
-    frameImage.src = './Siap Sukseskan_FINAL.png';
+    // Using the simplified background name
+    frameImage.src = './bg.png';
     frameImage.onload = () => {
         // Direct load - No complex processing
         finishLoadingFrame();
     };
 
-    // Safety Timeout: If image takes too long, force start after 5 seconds
+    // Aggressive Timeout: 3 seconds max
     setTimeout(() => {
         if (loadingOverlay.style.display !== 'none') {
-            console.warn("Loading timed out, forcing start.");
             loadingOverlay.style.display = 'none';
+            // Alert user if legacy cache is suspected or file missing
+            console.log("Forcing load due to timeout.");
+            // If checking fails, we just let the canvas be (it might show nothing but at least UI is usable)
         }
-    }, 5000);
+    }, 3000);
 
     frameImage.onerror = () => {
-        // Fallback to original if new one fails
+        console.error("BG.png not found.");
+        // Try fallback to old names just in case user didn't upload new one yet
+        frameImage.src = './Siap Sukseskan.png';
         frameImage.onerror = () => {
             // Fallback to original if new one fails
             console.warn("New frame not found, trying default.");
@@ -55,8 +60,8 @@ function init() {
             };
             // Add another error handler for the fallback
             frameImage.onerror = () => {
-                alert("Gagal memuat frame. Pastikan file frame tersedia.");
                 loadingOverlay.style.display = 'none';
+                alert("Gambar background tidak ditemukan! Pastikan Anda meng-upload file 'bg.png' ke GitHub.");
             }
         };
     }
