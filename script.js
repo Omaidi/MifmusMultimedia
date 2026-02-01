@@ -28,7 +28,7 @@ function init() {
     loadingOverlay.style.display = 'flex';
     frameImage.crossOrigin = "anonymous";
     // Using the user's uploaded file "Siap Sukseskan.png"
-    frameImage.src = './assets/Siap Sukseskan.png';
+    frameImage.src = './Siap Sukseskan.png';
     frameImage.onload = () => {
         // Process frame to remove blue color
         processFrameTransparency();
@@ -36,7 +36,7 @@ function init() {
     frameImage.onerror = () => {
         // Fallback to original if new one fails
         console.warn("New frame not found, trying default.");
-        frameImage.src = './assets/frame.png';
+        frameImage.src = './frame.png';
         frameImage.onload = loadDefaultCanvas;
     };
 }
