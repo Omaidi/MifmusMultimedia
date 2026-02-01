@@ -28,208 +28,219 @@ function init() {
     loadingOverlay.style.display = 'flex';
     // Removed crossOrigin = "anonymous" to prevent tainted canvas issues with local/relative images
     // frameImage.crossOrigin = "anonymous"; 
-    // Using the user's uploaded file "Siap Sukseskan.png"
-    frameImage.src = './Siap Sukseskan.png';
+    // Using the final image with new QR code
+    frameImage.src = './Siap Sukseskan_FINAL.png';
     frameImage.onload = () => {
-        // Process frame to remove blue color
-        processFrameTransparency();
+        // Direct load - No complex processing
+        finishLoadingFrame();
     };
+
+    // Safety Timeout: If image takes too long, force start after 5 seconds
+    setTimeout(() => {
+        if (loadingOverlay.style.display !== 'none') {
+            console.warn("Loading timed out, forcing start.");
+            loadingOverlay.style.display = 'none';
+        }
+    }, 5000);
+
     frameImage.onerror = () => {
         // Fallback to original if new one fails
-        console.warn("New frame not found, trying default.");
-        frameImage.src = './frame.png';
-        frameImage.onload = () => {
+        frameImage.onerror = () => {
+            // Fallback to original if new one fails
+            console.warn("New frame not found, trying default.");
+            frameImage.src = './frame.png';
+            frameImage.onload = () => {
+                loadDefaultCanvas();
+                loadingOverlay.style.display = 'none';
+            };
+            // Add another error handler for the fallback
+            frameImage.onerror = () => {
+                alert("Gagal memuat frame. Pastikan file frame tersedia.");
+                loadingOverlay.style.display = 'none';
+            }
+        };
+    }
+
+    function processFrameTransparency() {
+        const hiddenCanvas = document.createElement('canvas');
+        hiddenCanvas.width = frameImage.width;
+        hiddenCanvas.height = frameImage.height;
+        const hCtx = hiddenCanvas.getContext('2d');
+        hCtx.drawImage(frameImage, 0, 0);
+
+        const imageData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+        const data = imageData.data;
+
+        // Chroma Key: Remove Blue
+        // Logic: Blue > Red + threshold AND Blue > Green + threshold
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+
+            // Thresholds can be tuned. 
+            // If it's a "Blue" screen, B is usually dominant.
+            if (b > r + 20 && b > g + 20 && b > 100) {
+                data[i + 3] = 0; // Alpha = 0 (Transparent)
+            }
+        }
+
+        hCtx.putImageData(imageData, 0, 0);
+
+        // Replace frameImage source with processed one
+        const processedImage = new Image();
+        processedImage.onload = () => {
+            frameImage = processedImage;
+            // Set canvas to match frame resolution EXACTLY
+            canvas.width = frameImage.naturalWidth;
+            canvas.height = frameImage.naturalHeight;
+
             loadDefaultCanvas();
             loadingOverlay.style.display = 'none';
+            updateCanvas();
         };
-        // Add another error handler for the fallback
-        frameImage.onerror = () => {
-            alert("Gagal memuat frame. Pastikan file frame tersedia.");
+        try {
+            processedImage.src = hiddenCanvas.toDataURL();
+        } catch (e) {
+            console.error("Canvas tainted or error:", e);
+            // Fallback: If processing fails (e.g. CORS), just use original
+            frameImage.onload = null; // Prevent recursion
+            loadDefaultCanvas();
             loadingOverlay.style.display = 'none';
         }
-    };
-}
-
-function processFrameTransparency() {
-    const hiddenCanvas = document.createElement('canvas');
-    hiddenCanvas.width = frameImage.width;
-    hiddenCanvas.height = frameImage.height;
-    const hCtx = hiddenCanvas.getContext('2d');
-    hCtx.drawImage(frameImage, 0, 0);
-
-    const imageData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-    const data = imageData.data;
-
-    // Chroma Key: Remove Blue
-    // Logic: Blue > Red + threshold AND Blue > Green + threshold
-    for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-
-        // Thresholds can be tuned. 
-        // If it's a "Blue" screen, B is usually dominant.
-        if (b > r + 20 && b > g + 20 && b > 100) {
-            data[i + 3] = 0; // Alpha = 0 (Transparent)
-        }
     }
 
-    hCtx.putImageData(imageData, 0, 0);
+    // Initial draw: Just the frame
+    function loadDefaultCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Draw placeholder background if transparent
+        ctx.fillStyle = '#f0f0f0'; // Light grey bg for transparency check
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Replace frameImage source with processed one
-    const processedImage = new Image();
-    processedImage.onload = () => {
-        frameImage = processedImage;
-        // Set canvas to match frame resolution EXACTLY
-        canvas.width = frameImage.naturalWidth;
-        canvas.height = frameImage.naturalHeight;
-
-        loadDefaultCanvas();
-        loadingOverlay.style.display = 'none';
-        updateCanvas();
-    };
-    try {
-        processedImage.src = hiddenCanvas.toDataURL();
-    } catch (e) {
-        console.error("Canvas tainted or error:", e);
-        // Fallback: If processing fails (e.g. CORS), just use original
-        frameImage.onload = null; // Prevent recursion
-        loadDefaultCanvas();
-        loadingOverlay.style.display = 'none';
+        ctx.drawImage(frameImage, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
     }
-}
 
-// Initial draw: Just the frame
-function loadDefaultCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // Draw placeholder background if transparent
-    ctx.fillStyle = '#f0f0f0'; // Light grey bg for transparency check
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.drawImage(frameImage, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
-}
-
-// Handle Image Upload
-imageInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            userImage = new Image();
-            userImage.onload = () => {
-                userImageLoaded = true;
-                resetPosition();
-                updateCanvas();
-                showControls();
+    // Handle Image Upload
+    imageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                userImage = new Image();
+                userImage.onload = () => {
+                    userImageLoaded = true;
+                    resetPosition();
+                    updateCanvas();
+                    showControls();
+                };
+                userImage.src = event.target.result;
             };
-            userImage.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function resetPosition() {
+        scale = 1;
+        zoomSlider.value = 1;
+
+        // Fit user image to canvas
+        let scaleEffect = Math.max(canvas.width / userImage.width, canvas.height / userImage.height);
+        scale = scaleEffect;
+
+        // Reset position to center
+        position.x = (canvas.width - userImage.width * scale) / 2;
+        position.y = (canvas.height - userImage.height * scale) / 2;
     }
-});
 
-function resetPosition() {
-    scale = 1;
-    zoomSlider.value = 1;
+    function showControls() {
+        instructionOverlay.style.display = 'none';
+        zoomControl.classList.remove('hidden');
+        downloadBtn.classList.remove('hidden');
+        resetBtn.classList.remove('hidden');
 
-    // Fit user image to canvas
-    let scaleEffect = Math.max(canvas.width / userImage.width, canvas.height / userImage.height);
-    scale = scaleEffect;
+        // Remove dashed border looks better
+        document.querySelector('.canvas-container').style.border = 'none';
+    }
 
-    // Reset position to center
-    position.x = (canvas.width - userImage.width * scale) / 2;
-    position.y = (canvas.height - userImage.height * scale) / 2;
-}
+    function updateCanvas() {
+        if (!userImageLoaded) return;
 
-function showControls() {
-    instructionOverlay.style.display = 'none';
-    zoomControl.classList.remove('hidden');
-    downloadBtn.classList.remove('hidden');
-    resetBtn.classList.remove('hidden');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Remove dashed border looks better
-    document.querySelector('.canvas-container').style.border = 'none';
-}
+        // 1. Draw User Image
+        // Apply transformations
+        // We need to pivot zoom around center? or just simple scaling top-left
+        // Simple scaling is easier for MVP. 
 
-function updateCanvas() {
-    if (!userImageLoaded) return;
+        // Helper to calculate current dimensions
+        const currentWidth = userImage.width * scale * zoomSlider.value;
+        const currentHeight = userImage.height * scale * zoomSlider.value;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Draw
+        ctx.drawImage(userImage, position.x, position.y, currentWidth, currentHeight);
 
-    // 1. Draw User Image
-    // Apply transformations
-    // We need to pivot zoom around center? or just simple scaling top-left
-    // Simple scaling is easier for MVP. 
+        // 2. Draw Frame on top
+        ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    }
 
-    // Helper to calculate current dimensions
-    const currentWidth = userImage.width * scale * zoomSlider.value;
-    const currentHeight = userImage.height * scale * zoomSlider.value;
+    // Zoom Control
+    zoomSlider.addEventListener('input', () => {
+        // Optional: Zoom towards center logic could be added here
+        // For now simple redraw
+        updateCanvas();
+    });
 
-    // Draw
-    ctx.drawImage(userImage, position.x, position.y, currentWidth, currentHeight);
+    // Dragging Logic
+    // Mouse
+    canvas.addEventListener('mousedown', startDrag);
+    window.addEventListener('mouseup', stopDrag);
+    window.addEventListener('mousemove', drag);
 
-    // 2. Draw Frame on top
-    ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
-}
+    // Touch
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // prevent scrolling
+        startDrag(e.touches[0]);
+    }, { passive: false });
+    window.addEventListener('touchend', stopDrag);
+    window.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        drag(e.touches[0]);
+    }, { passive: false });
 
-// Zoom Control
-zoomSlider.addEventListener('input', () => {
-    // Optional: Zoom towards center logic could be added here
-    // For now simple redraw
-    updateCanvas();
-});
+    function startDrag(e) {
+        if (!userImageLoaded) return;
+        isDragging = true;
+        startPos.x = e.clientX - position.x;
+        startPos.y = e.clientY - position.y;
+        canvas.style.cursor = 'grabbing';
+    }
 
-// Dragging Logic
-// Mouse
-canvas.addEventListener('mousedown', startDrag);
-window.addEventListener('mouseup', stopDrag);
-window.addEventListener('mousemove', drag);
+    function stopDrag() {
+        isDragging = false;
+        canvas.style.cursor = 'grab';
+    }
 
-// Touch
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // prevent scrolling
-    startDrag(e.touches[0]);
-}, { passive: false });
-window.addEventListener('touchend', stopDrag);
-window.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    drag(e.touches[0]);
-}, { passive: false });
+    function drag(e) {
+        if (!isDragging) return;
+        position.x = e.clientX - startPos.x;
+        position.y = e.clientY - startPos.y;
+        updateCanvas();
+    }
 
-function startDrag(e) {
-    if (!userImageLoaded) return;
-    isDragging = true;
-    startPos.x = e.clientX - position.x;
-    startPos.y = e.clientY - position.y;
-    canvas.style.cursor = 'grabbing';
-}
+    // Download
+    downloadBtn.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = 'Twibbon-Haflah-Miftahul-Mustarsyidin.png';
+        // Use maximum quality for PNG (though PNG is lossless, sometimes browser implementation varies)
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+    });
 
-function stopDrag() {
-    isDragging = false;
-    canvas.style.cursor = 'grab';
-}
+    // Reset
+    resetBtn.addEventListener('click', () => {
+        resetPosition();
+        updateCanvas();
+    });
 
-function drag(e) {
-    if (!isDragging) return;
-    position.x = e.clientX - startPos.x;
-    position.y = e.clientY - startPos.y;
-    updateCanvas();
-}
-
-// Download
-downloadBtn.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'Twibbon-Haflah-Miftahul-Mustarsyidin.png';
-    // Use maximum quality for PNG (though PNG is lossless, sometimes browser implementation varies)
-    link.href = canvas.toDataURL('image/png', 1.0);
-    link.click();
-});
-
-// Reset
-resetBtn.addEventListener('click', () => {
-    resetPosition();
-    updateCanvas();
-});
-
-// Initialize app
-init();
+    // Initialize app
+    init();
