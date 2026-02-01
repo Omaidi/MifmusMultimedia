@@ -25,13 +25,11 @@ html,
 body {
     width: 100%;
     min-height: 100vh;
-    /* Fallback */
     min-height: 100dvh;
-    /* Modern Mobile Full Height */
     margin: 0;
     padding: 0;
-    overflow: hidden;
-    /* Lock scroll */
+    overflow-x: hidden;
+    /* Prevent horizontal scroll only */
     background-color: var(--primary-color);
 }
 
@@ -53,14 +51,11 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    position: fixed;
-    /* Force fixed to viewport */
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 100dvh;
-    /* Explicit height */
+    flex-direction: column;
+    min-height: 100dvh;
+    /* Allow growing */
+    padding: 20px 0;
+    /* Vertical breathing room */
 }
 
 /* Background Effects */
@@ -89,14 +84,13 @@ body {
 .container {
     width: 100%;
     max-width: 600px;
-    max-width: 600px;
     z-index: 10;
     text-align: center;
-    /* Ensure container fits and allows flex shrinking */
-    max-height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    padding: 20px;
 }
 
 /* Typography */
@@ -330,45 +324,41 @@ input[type="range"] {
 /* Responsive */
 /* Responsive & Compact Mode */
 @media (max-width: 480px) {
+    body {
+        justify-content: flex-start;
+        /* Start from top on small screens to avoid cut-off */
+        padding-top: 20px;
+    }
+
+    .container {
+        padding: 10px;
+        justify-content: flex-start;
+    }
+
     .header {
-        margin-bottom: 15px;
-        /* Compact margin */
+        margin-bottom: 20px;
     }
 
     .header h1 {
         font-size: 1.8rem;
-        /* Smaller title */
-        margin-bottom: 0;
-    }
-
-    .header h2 {
-        font-size: 0.9rem;
-    }
-
-    .subtitle {
-        font-size: 0.8rem;
-        margin-top: 5px;
     }
 
     .twibbon-card {
-        padding: 15px;
-        gap: 12px;
-        /* Tighter gaps */
-        width: 95%;
-        /* Use full width */
-        margin: 0 auto;
+        padding: 20px;
+        gap: 15px;
+        width: 100%;
+    }
+
+    /* Ensure canvas doesn't take too much height */
+    .canvas-container {
+        width: 100%;
+        max-width: 100%;
+        margin-bottom: 10px;
     }
 
     .btn {
-        padding: 10px 20px;
-        font-size: 0.9rem;
-    }
-
-    /* Adjust canvas size for small screens to prevent overflow */
-    .canvas-container {
-        max-width: 80vw;
-        /* Limit width to save vertical space */
-        margin: 0 auto;
+        padding: 12px;
+        /* Touch friendly */
     }
 }
 
