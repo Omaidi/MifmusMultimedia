@@ -29,8 +29,8 @@ function init() {
     // Removed crossOrigin = "anonymous" to prevent tainted canvas issues with local/relative images
     // frameImage.crossOrigin = "anonymous"; 
     // Using the final image with new QR code
-    // Using the simplified background name
-    frameImage.src = './bg.png';
+    // Using the simplified background name with Cache Buster to force reload
+    frameImage.src = './bg.png?v=2';
     frameImage.onload = () => {
         // Direct load - No complex processing
         finishLoadingFrame();
@@ -49,7 +49,7 @@ function init() {
     frameImage.onerror = () => {
         console.error("BG.png not found.");
         // Try fallback to old names just in case user didn't upload new one yet
-        frameImage.src = './Siap Sukseskan.png';
+        frameImage.src = './bg.png?v=2';
         frameImage.onerror = () => {
             // Fallback to original if new one fails
             console.warn("New frame not found, trying default.");
@@ -61,7 +61,7 @@ function init() {
             // Add another error handler for the fallback
             frameImage.onerror = () => {
                 loadingOverlay.style.display = 'none';
-                alert("Gambar background tidak ditemukan! Pastikan Anda meng-upload file 'bg.png' ke GitHub.");
+                alert("ERROR: File 'bg.png' tidak ditemukan di GitHub! Mohon upload file tersebut.");
             }
         };
     }
