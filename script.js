@@ -14,7 +14,7 @@ let userImageLoaded = false;
 
 // Configuration
 // Configuration
-const CANVAS_SIZE = 2160; // Upgraded to 4K/2K for sharper results
+let currentScale = 1;
 let scale = 1;
 let position = { x: 0, y: 0 };
 let isDragging = false;
@@ -22,8 +22,7 @@ let startPos = { x: 0, y: 0 };
 
 // Initialize
 function init() {
-    canvas.width = CANVAS_SIZE;
-    canvas.height = CANVAS_SIZE;
+    // Canvas size will be set after frame loads
 
     // Load Frame
     loadingOverlay.style.display = 'flex';
@@ -72,6 +71,10 @@ function processFrameTransparency() {
     const processedImage = new Image();
     processedImage.onload = () => {
         frameImage = processedImage;
+        // Set canvas to match frame resolution EXACTLY
+        canvas.width = frameImage.naturalWidth;
+        canvas.height = frameImage.naturalHeight;
+
         loadDefaultCanvas();
         loadingOverlay.style.display = 'none';
         updateCanvas();
@@ -112,20 +115,13 @@ function resetPosition() {
     scale = 1;
     zoomSlider.value = 1;
 
-    // Center the image initially logic could be improved to 'cover'
-    // For now, center based on aspect ratio
-    const ratio = Math.min(CANVAS_SIZE / userImage.width, CANVAS_SIZE / userImage.height);
-    // Actually, let's start with scale 1 as user might want to zoom out
-    // Better UX: Start 'fitted' cover
-
-    let scaleEffect = Math.max(CANVAS_SIZE / userImage.width, CANVAS_SIZE / userImage.height);
-    scale = scaleEffect; // base scale
-    zoomSlider.value = 1; // slider represents multiplier of base scale? Or just raw scale?
-    // Let's make slider relative multiplier: 0.5x to 3x of the "cover" scale
+    // Fit user image to canvas
+    let scaleEffect = Math.max(canvas.width / userImage.width, canvas.height / userImage.height);
+    scale = scaleEffect;
 
     // Reset position to center
-    position.x = (CANVAS_SIZE - userImage.width * scale) / 2;
-    position.y = (CANVAS_SIZE - userImage.height * scale) / 2;
+    position.x = (canvas.width - userImage.width * scale) / 2;
+    position.y = (canvas.height - userImage.height * scale) / 2;
 }
 
 function showControls() {
@@ -156,7 +152,7 @@ function updateCanvas() {
     ctx.drawImage(userImage, position.x, position.y, currentWidth, currentHeight);
 
     // 2. Draw Frame on top
-    ctx.drawImage(frameImage, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
 }
 
 // Zoom Control
